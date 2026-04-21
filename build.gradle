@@ -1,0 +1,151 @@
+plugins {
+    id 'java'
+    id 'groovy'
+    id 'org.springframework.boot' version '4.0.5'
+    id 'io.spring.dependency-management' version '1.1.7'
+    id 'nu.studer.jooq' version '9.0'
+    id 'com.diffplug.spotless' version '7.0.4'
+}
+
+group = 'io.gfonseca'
+version = '0.0.1-SNAPSHOT'
+description = 'ledger'
+
+// Spring Boot 4 BOM sets groovy.version=5.0.4 but Spock 2.4 requires Groovy 4.x
+ext['groovy.version'] = '4.0.29'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-jooq'
+    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+
+    implementation 'org.flywaydb:flyway-core'
+    implementation 'org.flywaydb:flyway-database-postgresql'
+
+    runtimeOnly 'org.postgresql:postgresql'
+
+    implementation 'com.github.f4b6a3:ksuid-creator:4.1.1'
+
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.6'
+    implementation 'io.micrometer:micrometer-registry-prometheus'
+
+    // DDLDatabase parses Flyway migration SQL — no running database needed for codegen
+    jooqGenerator 'org.jooq:jooq-meta-extensions:3.19.31'
+}
+
+testing {
+    suites {
+        test {
+            useSpock('2.4-groovy-4.0')
+        }
+
+        integrationTest(JvmTestSuite) {
+            useSpock('2.4-groovy-4.0')
+
+            dependencies {
+                implementation project()
+                implementation 'org.spockframework:spock-spring:2.4-groovy-4.0'
+                implementation 'org.springframework.boot:spring-boot-starter-test'
+                implementation 'org.springframework.boot:spring-boot-starter-web'
+                implementation 'org.springframework.boot:spring-boot-starter-json'
+                implementation 'org.springframework:spring-jdbc'
+                implementation 'org.springframework.boot:spring-boot-testcontainers'
+                implementation platform('org.testcontainers:testcontainers-bom:1.20.6')
+                implementation 'org.testcontainers:postgresql'
+                runtimeOnly 'org.junit.platform:junit-platform-launcher'
+            }
+
+            targets {
+                all {
+                    testTask.configure {
+                        shouldRunAfter(test)
+                    }
+                }
+            }
+        }
+    }
+}
+
+jooq {
+    version = '3.19.31'
+    configurations {
+        main {
+            generationTool {
+                generator {
+                    database {
+                        name = 'org.jooq.meta.extensions.ddl.DDLDatabase'
+                        properties {
+                            property {
+                                key = 'scripts'
+                                value = 'src/main/resources/db/migration'
+                            }
+                            property {
+                                key = 'sort'
+                                value = 'flyway'
+                            }
+                            property {
+                                key = 'defaultNameCase'
+                                value = 'lower'
+                            }
+                        }
+                    }
+                    target {
+                        packageName = 'io.gfonseca.ledger.generated'
+                        directory = 'build/generated-sources/jooq'
+                    }
+                    generate {
+                        daos = false
+                        pojos = false
+                        records = true
+                    }
+                }
+            }
+        }
+    }
+}
+
+sourceSets {
+    main {
+        java {
+            srcDir layout.buildDirectory.dir('generated-sources/jooq')
+        }
+    }
+}
+
+tasks.named('compileJava') {
+    dependsOn tasks.named('generateJooq')
+}
+
+tasks.named('check') {
+    dependsOn(testing.suites.integrationTest)
+}
+
+spotless {
+    java {
+        target 'src/main/java/**/*.java'
+        palantirJavaFormat('2.90.0')
+        removeUnusedImports()
+        indentWithSpaces(4)
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
+    groovy {
+        target 'src/*/groovy/**/*.groovy'
+        indentWithSpaces(4)
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
+}
