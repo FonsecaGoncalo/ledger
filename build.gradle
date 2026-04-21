@@ -1,10 +1,10 @@
 plugins {
     id 'java'
     id 'groovy'
-    id 'org.springframework.boot' version '4.0.5'
-    id 'io.spring.dependency-management' version '1.1.7'
-    id 'nu.studer.jooq' version '9.0'
-    id 'com.diffplug.spotless' version '7.0.4'
+    alias(libs.plugins.spring.boot)
+    alias(libs.plugins.spring.dependency.management)
+    alias(libs.plugins.jooq)
+    alias(libs.plugins.spotless)
 }
 
 group = 'io.gfonseca'
@@ -12,7 +12,7 @@ version = '0.0.1-SNAPSHOT'
 description = 'ledger'
 
 // Spring Boot 4 BOM sets groovy.version=5.0.4 but Spock 2.4 requires Groovy 4.x
-ext['groovy.version'] = '4.0.29'
+ext['groovy.version'] = libs.versions.groovy.get()
 
 java {
     toolchain {
@@ -25,47 +25,47 @@ repositories {
 }
 
 dependencies {
-    implementation 'org.springframework.boot:spring-boot-starter'
-    implementation 'org.springframework.boot:spring-boot-starter-web'
-    implementation 'org.springframework.boot:spring-boot-starter-validation'
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    implementation 'org.springframework.boot:spring-boot-starter-jooq'
-    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+    implementation libs.spring.boot.starter
+    implementation libs.spring.boot.starter.web
+    implementation libs.spring.boot.starter.validation
+    implementation libs.spring.boot.starter.actuator
+    implementation libs.spring.boot.starter.jooq
+    implementation libs.spring.boot.starter.jdbc
 
-    implementation 'org.flywaydb:flyway-core'
-    implementation 'org.flywaydb:flyway-database-postgresql'
+    implementation libs.flyway.core
+    implementation libs.flyway.database.postgresql
 
-    runtimeOnly 'org.postgresql:postgresql'
+    runtimeOnly libs.postgresql
 
-    implementation 'com.github.f4b6a3:ksuid-creator:4.1.1'
+    implementation libs.ksuid.creator
 
-    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.6'
-    implementation 'io.micrometer:micrometer-registry-prometheus'
+    implementation libs.springdoc.openapi.starter.webmvc.ui
+    implementation libs.micrometer.registry.prometheus
 
     // DDLDatabase parses Flyway migration SQL — no running database needed for codegen
-    jooqGenerator 'org.jooq:jooq-meta-extensions:3.19.31'
+    jooqGenerator libs.jooq.meta.extensions
 }
 
 testing {
     suites {
         test {
-            useSpock('2.4-groovy-4.0')
+            useSpock(libs.versions.spock.get())
         }
 
         integrationTest(JvmTestSuite) {
-            useSpock('2.4-groovy-4.0')
+            useSpock(libs.versions.spock.get())
 
             dependencies {
                 implementation project()
-                implementation 'org.spockframework:spock-spring:2.4-groovy-4.0'
-                implementation 'org.springframework.boot:spring-boot-starter-test'
-                implementation 'org.springframework.boot:spring-boot-starter-web'
-                implementation 'org.springframework.boot:spring-boot-starter-json'
-                implementation 'org.springframework:spring-jdbc'
-                implementation 'org.springframework.boot:spring-boot-testcontainers'
-                implementation platform('org.testcontainers:testcontainers-bom:1.20.6')
-                implementation 'org.testcontainers:postgresql'
-                runtimeOnly 'org.junit.platform:junit-platform-launcher'
+                implementation libs.spock.spring
+                implementation libs.spring.boot.starter.test
+                implementation libs.spring.boot.starter.web
+                implementation libs.spring.boot.starter.json
+                implementation libs.spring.jdbc
+                implementation libs.spring.boot.testcontainers
+                implementation platform(libs.testcontainers.bom)
+                implementation libs.testcontainers.postgresql
+                runtimeOnly libs.junit.platform.launcher
             }
 
             targets {
@@ -80,7 +80,7 @@ testing {
 }
 
 jooq {
-    version = '3.19.31'
+    version = libs.versions.jooq.get()
     configurations {
         main {
             generationTool {
@@ -136,15 +136,15 @@ tasks.named('check') {
 spotless {
     java {
         target 'src/main/java/**/*.java'
-        palantirJavaFormat('2.90.0')
+        palantirJavaFormat(libs.versions.palantirJavaFormat.get())
         removeUnusedImports()
-        indentWithSpaces(4)
+        leadingTabsToSpaces(4)
         trimTrailingWhitespace()
         endWithNewline()
     }
     groovy {
         target 'src/*/groovy/**/*.groovy'
-        indentWithSpaces(4)
+        leadingTabsToSpaces(4)
         trimTrailingWhitespace()
         endWithNewline()
     }
