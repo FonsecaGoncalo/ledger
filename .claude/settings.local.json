@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./gradlew generateJooq *)",
+      "Bash(./gradlew compileJava)",
+      "Bash(./gradlew build *)",
+      "WebFetch(domain:repo1.maven.org)",
+      "WebFetch(domain:central.sonatype.com)",
+      "Bash(./gradlew compileJava compileTestJava compileIntegrationTestGroovy --console=plain)"
+    ]
+  }
+}
