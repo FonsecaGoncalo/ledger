@@ -14,9 +14,8 @@ class OpenApiConfig {
                 .info(new Info()
                         .title("Ledger API")
                         .version("v1")
-                        .description(
-                                "Double-entry ledger service. Records money movements as balanced transactions "
-                                        + "composed of postings that sum to zero per currency. Balances are derived "
-                                        + "from the posting log and never stored."));
+                        .description("Double-entry ledger service. Records money movements as balanced transactions "
+                                + "composed of postings that sum to zero per currency. Balances are derived "
+                                + "from the posting log and never stored."));
     }
 }
