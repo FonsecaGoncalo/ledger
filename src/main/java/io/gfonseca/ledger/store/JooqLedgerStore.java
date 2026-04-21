@@ -29,7 +29,7 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.jooq.DSLContext;
-import org.jooq.exception.IntegrityConstraintViolationException;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -47,7 +47,7 @@ class JooqLedgerStore implements LedgerStore {
     public Account insertAccount(Account account) {
         try {
             dsl.insertInto(ACCOUNTS).set(mapper.toAccountRecord(account)).execute();
-        } catch (IntegrityConstraintViolationException ex) {
+        } catch (DuplicateKeyException ex) {
             if (ex.getMessage() != null && ex.getMessage().contains("accounts_external_ref_key")) {
                 throw new DuplicateAccountException(account.externalRef());
             }

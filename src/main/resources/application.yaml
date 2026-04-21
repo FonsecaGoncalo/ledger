@@ -5,8 +5,6 @@ spring:
     url: jdbc:postgresql://localhost:5432/ledger
     username: ledger
     password: ledger
-  flyway:
-    enabled: false
   jooq:
     sql-dialect: postgres
 
