@@ -1,0 +1,16 @@
+spotless {
+    java {
+        target 'src/main/java/**/*.java'
+        palantirJavaFormat(libs.versions.palantirJavaFormat.get())
+        removeUnusedImports()
+        leadingTabsToSpaces(4)
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
+    groovy {
+        target 'src/*/groovy/**/*.groovy'
+        leadingTabsToSpaces(4)
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
+}

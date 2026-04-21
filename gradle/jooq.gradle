@@ -1,0 +1,49 @@
+jooq {
+    version = libs.versions.jooq.get()
+    configurations {
+        main {
+            generationTool {
+                generator {
+                    database {
+                        name = 'org.jooq.meta.extensions.ddl.DDLDatabase'
+                        properties {
+                            property {
+                                key = 'scripts'
+                                value = 'src/main/resources/db/migration'
+                            }
+                            property {
+                                key = 'sort'
+                                value = 'flyway'
+                            }
+                            property {
+                                key = 'defaultNameCase'
+                                value = 'lower'
+                            }
+                        }
+                    }
+                    target {
+                        packageName = 'io.gfonseca.ledger.generated'
+                        directory = 'build/generated-sources/jooq'
+                    }
+                    generate {
+                        daos = false
+                        pojos = false
+                        records = true
+                    }
+                }
+            }
+        }
+    }
+}
+
+sourceSets {
+    main {
+        java {
+            srcDir layout.buildDirectory.dir('generated-sources/jooq')
+        }
+    }
+}
+
+tasks.named('compileJava') {
+    dependsOn tasks.named('generateJooq')
+}
