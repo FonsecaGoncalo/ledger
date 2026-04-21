@@ -1,0 +1,36 @@
+spring:
+  application:
+    name: ledger
+  datasource:
+    url: jdbc:postgresql://localhost:5432/ledger
+    username: ledger
+    password: ledger
+  flyway:
+    enabled: false
+  jooq:
+    sql-dialect: postgres
+
+server:
+  port: 8080
+
+#logging:
+#  level:
+#    org.flywaydb: DEBUG
+#    org.jooq.tools.LoggerListener: DEBUG
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus,info
+  endpoint:
+    health:
+      show-details: always
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
