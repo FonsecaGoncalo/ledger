@@ -151,13 +151,14 @@ Non-obvious choices and what they trade away.
 
 ## Examples
 
-Four scenarios against a running service. Each one has a runnable script under `scripts/`:
+Five scenarios against a running service. Each one has a runnable script under `scripts/`:
 
 ```
 ./scripts/personal-accounts-demo.sh   # deposit, transfer, withdraw
 ./scripts/overdraft-demo.sh           # solvency rejection
 ./scripts/reversal-demo.sh            # reversal
 ./scripts/fx-conversion-demo.sh       # caller-implemented FX
+./scripts/fee-demo.sh                 # card payment with an applied fee
 ```
 
 All take an optional `BASE_URL` (default `http://localhost:8080`) and need `curl` and `jq`.
@@ -287,6 +288,29 @@ POST /api/v1/transactions
 Per-currency check: EUR `(+10000) + (−10000) = 0` ✓, USD `(+8700) + (−8700) = 0` ✓. The ledger commits. It doesn't interpret the rate or validate the rounding; those are the caller's problem. The ledger owns conservation.
 
 Final: Alice EUR €0, Alice USD $87.
+
+### Applied fee
+
+Fees are just another posting inside a balanced transaction. Alice pays €50 to a merchant with a €1 platform fee. Four accounts: a settlement pool (`ASSET`), Alice (`LIABILITY`), the merchant (`LIABILITY`), and a fee-revenue account (`REVENUE`, credit-normal — negative postings grow it). One transaction, three postings: Alice is debited the full €51, the merchant is credited €50, the €1 fee lands on revenue.
+
+```
+POST /api/v1/transactions
+{
+  "idempotencyKey": "payment-alice-cafe-...",
+  "type": "TRANSFER",
+  "description": "Card payment: Alice → Café €50.00 (fee €1.00)",
+  "postings": [
+    { "accountId": "<alice>",       "amount":  5100, "currency": "EUR" },
+    { "accountId": "<merchant>",    "amount": -5000, "currency": "EUR" },
+    { "accountId": "<fee-revenue>", "amount":  -100, "currency": "EUR" }
+  ],
+  "metadata": { "feeBps": 200, "feeAmount": 100 }
+}
+```
+
+Check: `(+5100) + (−5000) + (−100) = 0 EUR` ✓. Payment and fee commit together or not at all — there's no window where the customer is charged but the fee never posts. Bundling them into one balanced transaction is what makes that atomicity free.
+
+Starting from Alice with €100, after the payment: Alice €49.00, Merchant €50.00, Fee Revenue €1.00.
 
 ## Running it
 
