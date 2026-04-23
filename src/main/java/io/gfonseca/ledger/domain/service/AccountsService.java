@@ -13,11 +13,15 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 @Component
 public class AccountsService {
+
+    private static final Logger log = LoggerFactory.getLogger(AccountsService.class);
 
     private final LedgerStore store;
 
@@ -34,7 +38,16 @@ public class AccountsService {
                 currency.toUpperCase(),
                 metadata,
                 Instant.now());
-        return store.insertAccount(account);
+        Account inserted = store.insertAccount(account);
+        log.atInfo()
+                .addKeyValue("event", "account.created")
+                .addKeyValue("account_id", inserted.id())
+                .addKeyValue("external_ref", inserted.externalRef())
+                .addKeyValue("type", inserted.type())
+                .addKeyValue("currency", inserted.currency())
+                .setMessage("account created")
+                .log();
+        return inserted;
     }
 
     @Transactional(readOnly = true)

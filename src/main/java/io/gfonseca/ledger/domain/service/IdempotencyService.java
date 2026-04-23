@@ -12,10 +12,14 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 @Component
 public class IdempotencyService {
+
+    private static final Logger log = LoggerFactory.getLogger(IdempotencyService.class);
 
     private final LedgerStore store;
 
@@ -36,6 +40,12 @@ public class IdempotencyService {
             String reversesTransactionId,
             Map<String, Object> metadata) {
         if (!payloadMatches(existing, type, description, postingRequests, reversesTransactionId, metadata)) {
+            log.atWarn()
+                    .addKeyValue("event", "idempotency.payload_mismatch")
+                    .addKeyValue("idempotency_key", existing.idempotencyKey())
+                    .addKeyValue("transaction_id", existing.id())
+                    .setMessage("idempotency key reused with mismatched payload")
+                    .log();
             throw new DuplicateTransactionException(existing.idempotencyKey());
         }
         return existing;

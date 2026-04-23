@@ -11,10 +11,15 @@ spring:
 server:
   port: 8080
 
-#logging:
-#  level:
-#    org.flywaydb: DEBUG
-#    org.jooq.tools.LoggerListener: DEBUG
+logging:
+  structured:
+    format:
+      console: ecs
+    ecs:
+      service:
+        name: ${spring.application.name}
+        version: ${spring.application.version:0.0.1-SNAPSHOT}
+        environment: ${APP_ENV:local}
 
 management:
   endpoints:

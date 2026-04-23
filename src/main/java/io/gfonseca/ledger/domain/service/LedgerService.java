@@ -20,11 +20,15 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class LedgerService {
+
+    private static final Logger log = LoggerFactory.getLogger(LedgerService.class);
 
     private final LedgerStore store;
     private final IdempotencyService idempotency;
@@ -79,8 +83,10 @@ public class LedgerService {
 
         Optional<Transaction> existing = idempotency.find(idempotencyKey);
         if (existing.isPresent()) {
-            return idempotency.reconcile(
+            Transaction reconciled = idempotency.reconcile(
                     existing.get(), type, description, postingRequests, reversesTransactionId, metadata);
+            logTransaction("transaction.idempotent_replay", reconciled);
+            return reconciled;
         }
 
         Accounts accounts = accountsService.loadAndLock(postingRequests.stream()
@@ -97,10 +103,24 @@ public class LedgerService {
         Transaction txn = TransactionFactory.create(
                 idempotencyKey, type, description, postingRequests, reversesTransactionId, metadata, sequences);
 
-        return store.insertTransaction(txn);
+        Transaction inserted = store.insertTransaction(txn);
+        logTransaction("transaction.submitted", inserted);
+        return inserted;
     }
 
     private Sequences nextSequences(Set<String> accountIds) {
         return new Sequences(accountIds.stream().collect(Collectors.toMap(Function.identity(), store::nextSequenceNo)));
+    }
+
+    private static void logTransaction(String event, Transaction txn) {
+        log.atInfo()
+                .addKeyValue("event", event)
+                .addKeyValue("transaction_id", txn.id())
+                .addKeyValue("idempotency_key", txn.idempotencyKey())
+                .addKeyValue("type", txn.type())
+                .addKeyValue("postings_count", txn.postings().size())
+                .addKeyValue("reverses_transaction_id", txn.reversesTransactionId())
+                .setMessage(event)
+                .log();
     }
 }

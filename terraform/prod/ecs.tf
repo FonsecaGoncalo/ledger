@@ -38,6 +38,10 @@ locals {
       { name = "OTEL_METRICS_EXPORTER", value = "otlp" },
       { name = "OTEL_LOGS_EXPORTER", value = "otlp" },
       { name = "OTEL_RESOURCE_ATTRIBUTES", value = "deployment.environment=prod" },
+
+      { name = "OTEL_INSTRUMENTATION_LOGBACK_APPENDER_EXPERIMENTAL_CAPTURE_KEY_VALUE_PAIR_ATTRIBUTES", value = "true" },
+      { name = "OTEL_INSTRUMENTATION_LOGBACK_APPENDER_EXPERIMENTAL_CAPTURE_MDC_ATTRIBUTES", value = "*" },
+      { name = "OTEL_INSTRUMENTATION_LOGBACK_APPENDER_EXPERIMENTAL_CAPTURE_CODE_ATTRIBUTES", value = "true" },
     ]
 
     secrets = [
