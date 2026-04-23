@@ -2,10 +2,9 @@ FROM eclipse-temurin:25-jdk AS build
 WORKDIR /workspace
 
 ARG OTEL_AGENT_VERSION=2.27.0
-ARG OTEL_AGENT_SHA256=bd01fea1304e8c8803fff827a0bdda02b2266742a85c62548053c6761474bb5b
-RUN curl -fsSL -o /otel-agent.jar \
-      "https://repo1.maven.org/maven2/io/opentelemetry/javaagent/opentelemetry-javaagent/${OTEL_AGENT_VERSION}/opentelemetry-javaagent-${OTEL_AGENT_VERSION}.jar" \
- && echo "${OTEL_AGENT_SHA256}  /otel-agent.jar" | sha256sum -c -
+ADD --checksum=sha256:bd01fea1304e8c8803fff827a0bdda02b2266742a85c62548053c6761474bb5b \
+    https://repo1.maven.org/maven2/io/opentelemetry/javaagent/opentelemetry-javaagent/${OTEL_AGENT_VERSION}/opentelemetry-javaagent-${OTEL_AGENT_VERSION}.jar \
+    /otel-agent.jar
 
 COPY gradlew ./
 COPY gradle gradle
