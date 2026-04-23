@@ -4,6 +4,7 @@ import io.gfonseca.ledger.domain.exception.InvalidReversalException;
 import io.gfonseca.ledger.domain.model.TransactionType;
 import io.gfonseca.ledger.domain.validation.LedgerContext;
 import io.gfonseca.ledger.domain.validation.LedgerRule;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Component;
 public class ReversalTypeLinkRule implements LedgerRule {
 
     @Override
+    @WithSpan
     public void validate(LedgerContext ctx) {
         TransactionType type = ctx.type();
         String reversesTransactionId = ctx.reversesTransactionId();

@@ -5,6 +5,7 @@ import io.gfonseca.ledger.domain.model.Money;
 import io.gfonseca.ledger.domain.model.PostingRequest;
 import io.gfonseca.ledger.domain.validation.LedgerContext;
 import io.gfonseca.ledger.domain.validation.LedgerRule;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Component;
 public class BalancedPostingsRule implements LedgerRule {
 
     @Override
+    @WithSpan
     public void validate(LedgerContext ctx) {
         List<PostingRequest> postings = ctx.postings();
 

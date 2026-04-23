@@ -7,6 +7,7 @@ import io.gfonseca.ledger.domain.model.PostingRequest;
 import io.gfonseca.ledger.domain.validation.LedgerContext;
 import io.gfonseca.ledger.domain.validation.LedgerRule;
 import io.gfonseca.ledger.store.LedgerStore;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,6 +25,7 @@ public class SufficientFundsRule implements LedgerRule {
     }
 
     @Override
+    @WithSpan
     public void validate(LedgerContext ctx) {
         Map<String, Money> deltaByAccount = new HashMap<>();
 

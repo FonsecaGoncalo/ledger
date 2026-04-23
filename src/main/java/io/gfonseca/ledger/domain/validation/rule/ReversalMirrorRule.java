@@ -10,6 +10,7 @@ import io.gfonseca.ledger.domain.model.TransactionType;
 import io.gfonseca.ledger.domain.validation.LedgerContext;
 import io.gfonseca.ledger.domain.validation.LedgerRule;
 import io.gfonseca.ledger.store.LedgerStore;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -27,6 +28,7 @@ public class ReversalMirrorRule implements LedgerRule {
     }
 
     @Override
+    @WithSpan
     public void validate(LedgerContext ctx) {
         String reversesTransactionId = ctx.reversesTransactionId();
         if (reversesTransactionId == null) {
