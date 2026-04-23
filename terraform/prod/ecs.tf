@@ -13,7 +13,7 @@ resource "aws_ecs_cluster_capacity_providers" "main" {
 }
 
 locals {
-  jdbc_url = "jdbc:postgresql://${aws_db_instance.ledger.address}:5432/ledger"
+  jdbc_url = "jdbc:postgresql://${aws_rds_cluster.ledger.endpoint}:${aws_rds_cluster.ledger.port}/ledger"
 
   container_definitions = [{
     name      = local.container_name
@@ -45,7 +45,9 @@ locals {
     ]
 
     secrets = [
-      { name = "SPRING_DATASOURCE_PASSWORD", valueFrom = aws_secretsmanager_secret.db_password.arn },
+      # Aurora stores the managed master secret as JSON {username, password};
+      # `:password::` extracts just the password field.
+      { name = "SPRING_DATASOURCE_PASSWORD", valueFrom = "${aws_rds_cluster.ledger.master_user_secret[0].secret_arn}:password::" },
     ]
 
     logConfiguration = {

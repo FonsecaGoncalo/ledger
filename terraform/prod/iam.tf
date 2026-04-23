@@ -25,7 +25,7 @@ data "aws_iam_policy_document" "task_execution_secrets" {
     sid       = "ReadDbSecret"
     effect    = "Allow"
     actions   = ["secretsmanager:GetSecretValue"]
-    resources = [aws_secretsmanager_secret.db_password.arn]
+    resources = [aws_rds_cluster.ledger.master_user_secret[0].secret_arn]
   }
 }
 

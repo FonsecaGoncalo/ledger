@@ -9,8 +9,13 @@ output "ecr_repository_url" {
 }
 
 output "rds_endpoint" {
-  description = "RDS endpoint (host:port)."
-  value       = aws_db_instance.ledger.endpoint
+  description = "Aurora cluster endpoint (host:port)."
+  value       = "${aws_rds_cluster.ledger.endpoint}:${aws_rds_cluster.ledger.port}"
+}
+
+output "rds_cluster_arn" {
+  description = "Aurora cluster ARN — pass to the RDS Data API / Console Query Editor."
+  value       = aws_rds_cluster.ledger.arn
 }
 
 output "jdbc_url" {
@@ -19,8 +24,8 @@ output "jdbc_url" {
 }
 
 output "db_secret_arn" {
-  description = "Secrets Manager ARN for the DB password — paste into .github/aws/task-definition.json."
-  value       = aws_secretsmanager_secret.db_password.arn
+  description = "Secrets Manager ARN for the Aurora-managed master secret — paste into .github/aws/task-definition.json (append ':password::' in ECS `valueFrom`)."
+  value       = aws_rds_cluster.ledger.master_user_secret[0].secret_arn
 }
 
 output "cluster_name" {

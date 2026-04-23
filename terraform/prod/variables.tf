@@ -16,18 +16,6 @@ variable "container_port" {
   default     = 8080
 }
 
-variable "db_instance_class" {
-  description = "RDS instance class."
-  type        = string
-  default     = "db.t4g.micro"
-}
-
-variable "db_allocated_storage" {
-  description = "RDS allocated storage in GB."
-  type        = number
-  default     = 20
-}
-
 variable "task_cpu" {
   description = "Fargate task CPU units (256 = 0.25 vCPU)."
   type        = number
