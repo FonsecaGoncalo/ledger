@@ -12,6 +12,9 @@ spock = "2.4-groovy-4.0"
 testcontainers = "1.20.6"
 palantirJavaFormat = "2.90.0"
 
+# OTel Java agent is pinned in the Dockerfile and must match this.
+opentelemetryInstrumentation = "2.27.0"
+
 [libraries]
 spring-boot-starter = { module = "org.springframework.boot:spring-boot-starter" }
 spring-boot-starter-web = { module = "org.springframework.boot:spring-boot-starter-web" }
@@ -35,6 +38,8 @@ springdoc-openapi-starter-webmvc-ui = { module = "org.springdoc:springdoc-openap
 micrometer-registry-prometheus = { module = "io.micrometer:micrometer-registry-prometheus" }
 
 jooq-meta-extensions = { module = "org.jooq:jooq-meta-extensions", version.ref = "jooq" }
+
+opentelemetry-instrumentation-annotations = { module = "io.opentelemetry.instrumentation:opentelemetry-instrumentation-annotations", version.ref = "opentelemetryInstrumentation" }
 
 spock-spring = { module = "org.spockframework:spock-spring", version.ref = "spock" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }

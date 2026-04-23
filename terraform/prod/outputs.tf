@@ -34,3 +34,13 @@ output "service_name" {
 output "log_group" {
   value = aws_cloudwatch_log_group.ledger.name
 }
+
+output "signoz_ui_url" {
+  description = "SigNoz UI (public)."
+  value       = "http://${aws_instance.signoz.public_ip}:8080"
+}
+
+output "signoz_otlp_endpoint" {
+  description = "OTLP gRPC endpoint (VPC-internal) that the ledger app exports to."
+  value       = "http://${aws_instance.signoz.private_ip}:4317"
+}

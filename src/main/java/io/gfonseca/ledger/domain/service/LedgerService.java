@@ -12,6 +12,8 @@ import io.gfonseca.ledger.domain.model.TransactionType;
 import io.gfonseca.ledger.domain.validation.LedgerContext;
 import io.gfonseca.ledger.domain.validation.LedgerRulesEngine;
 import io.gfonseca.ledger.store.LedgerStore;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -40,24 +42,28 @@ public class LedgerService {
         this.rulesEngine = rulesEngine;
     }
 
+    @WithSpan
     @Transactional(readOnly = true)
     public BalanceView getBalance(String accountId) {
         accountsService.findAccount(accountId).orElseThrow(() -> new AccountNotFoundException(accountId));
         return store.getBalanceView(accountId);
     }
 
+    @WithSpan
     @Transactional(readOnly = true)
     public Transaction getTransaction(String transactionId) {
         return store.findTransactionById(transactionId)
                 .orElseThrow(() -> new TransactionNotFoundException(transactionId));
     }
 
+    @WithSpan
     @Transactional(readOnly = true)
     public PagedResult<Transaction> getTransactionHistory(String accountId, String cursor, int limit) {
         accountsService.findAccount(accountId).orElseThrow(() -> new AccountNotFoundException(accountId));
         return store.getTransactionHistory(accountId, cursor, limit);
     }
 
+    @WithSpan
     @Transactional
     public Transaction submitTransaction(
             String idempotencyKey,
@@ -66,6 +72,11 @@ public class LedgerService {
             List<PostingRequest> postingRequests,
             String reversesTransactionId,
             Map<String, Object> metadata) {
+        Span span = Span.current();
+        span.setAttribute("ledger.idempotency_key", idempotencyKey);
+        span.setAttribute("ledger.type", type.name());
+        span.setAttribute("ledger.postings_count", postingRequests.size());
+
         Optional<Transaction> existing = idempotency.find(idempotencyKey);
         if (existing.isPresent()) {
             return idempotency.reconcile(

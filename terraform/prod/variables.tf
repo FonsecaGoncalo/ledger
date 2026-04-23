@@ -51,3 +51,21 @@ variable "log_retention_days" {
   type        = number
   default     = 14
 }
+
+variable "signoz_instance_type" {
+  description = "EC2 instance type for the self-hosted SigNoz host. t3.large is the documented minimum."
+  type        = string
+  default     = "t3.large"
+}
+
+variable "signoz_data_volume_size_gb" {
+  description = "EBS gp3 volume size for ClickHouse data."
+  type        = number
+  default     = 100
+}
+
+variable "signoz_version" {
+  description = "SigNoz git tag to check out on the host."
+  type        = string
+  default     = "v0.120.0"
+}

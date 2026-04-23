@@ -29,6 +29,15 @@ locals {
     environment = [
       { name = "SPRING_DATASOURCE_URL", value = local.jdbc_url },
       { name = "SPRING_DATASOURCE_USERNAME", value = "ledger" },
+
+      { name = "JAVA_TOOL_OPTIONS", value = "-javaagent:/app/otel-agent.jar" },
+      { name = "OTEL_SERVICE_NAME", value = local.name },
+      { name = "OTEL_EXPORTER_OTLP_ENDPOINT", value = "http://${aws_instance.signoz.private_ip}:4317" },
+      { name = "OTEL_EXPORTER_OTLP_PROTOCOL", value = "grpc" },
+      { name = "OTEL_TRACES_EXPORTER", value = "otlp" },
+      { name = "OTEL_METRICS_EXPORTER", value = "otlp" },
+      { name = "OTEL_LOGS_EXPORTER", value = "otlp" },
+      { name = "OTEL_RESOURCE_ATTRIBUTES", value = "deployment.environment=prod" },
     ]
 
     secrets = [

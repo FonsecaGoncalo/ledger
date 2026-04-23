@@ -5,6 +5,7 @@ import io.gfonseca.ledger.domain.model.PostingRequest;
 import io.gfonseca.ledger.domain.model.Transaction;
 import io.gfonseca.ledger.domain.model.TransactionType;
 import io.gfonseca.ledger.store.LedgerStore;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -26,6 +27,7 @@ public class IdempotencyService {
         return store.findByIdempotencyKey(idempotencyKey);
     }
 
+    @WithSpan
     public Transaction reconcile(
             Transaction existing,
             TransactionType type,

@@ -1,0 +1,55 @@
+#!/bin/bash
+set -euxo pipefail
+
+SIGNOZ_VERSION="${signoz_version}"
+DATA_DIR="/var/lib/signoz"
+DEVICE="/dev/sdh"
+
+dnf update -y
+dnf install -y docker git
+systemctl enable --now docker
+
+# Docker compose v2 plugin
+mkdir -p /usr/libexec/docker/cli-plugins
+curl -fsSL \
+  "https://github.com/docker/compose/releases/download/v2.32.4/docker-compose-linux-$(uname -m)" \
+  -o /usr/libexec/docker/cli-plugins/docker-compose
+chmod +x /usr/libexec/docker/cli-plugins/docker-compose
+
+# Wait for the EBS attachment to resolve (nitro renames it).
+for i in $(seq 1 30); do
+  ACTUAL_DEV=$(lsblk -nlo NAME,SERIAL | awk '$2 ~ /^vol/ && NR>1 {print "/dev/"$1; exit}')
+  if [ -n "$${ACTUAL_DEV:-}" ] && [ -b "$${ACTUAL_DEV}" ]; then
+    break
+  fi
+  if [ -b "$${DEVICE}" ]; then
+    ACTUAL_DEV="$${DEVICE}"
+    break
+  fi
+  sleep 2
+done
+
+if [ -z "$${ACTUAL_DEV:-}" ]; then
+  echo "EBS device did not appear" >&2
+  exit 1
+fi
+
+# Format only if blank.
+if ! blkid "$${ACTUAL_DEV}" >/dev/null 2>&1; then
+  mkfs.ext4 -L signoz-data "$${ACTUAL_DEV}"
+fi
+
+mkdir -p "$${DATA_DIR}"
+if ! grep -q "$${DATA_DIR}" /etc/fstab; then
+  echo "LABEL=signoz-data $${DATA_DIR} ext4 defaults,nofail 0 2" >> /etc/fstab
+fi
+mount -a
+
+# Clone SigNoz at pinned tag into the persistent volume.
+if [ ! -d "$${DATA_DIR}/signoz" ]; then
+  git clone --depth 1 --branch "$${SIGNOZ_VERSION}" \
+    https://github.com/SigNoz/signoz.git "$${DATA_DIR}/signoz"
+fi
+
+cd "$${DATA_DIR}/signoz/deploy/docker"
+docker compose up -d
