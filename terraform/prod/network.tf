@@ -65,7 +65,7 @@ resource "aws_security_group" "alb" {
 
 resource "aws_security_group" "ecs" {
   name        = "${local.name}-ecs"
-  description = "Ledger Fargate tasks — ALB-only ingress"
+  description = "Ledger Fargate tasks - ALB-only ingress"
   vpc_id      = aws_vpc.main.id
 
   ingress {
@@ -89,7 +89,7 @@ resource "aws_security_group" "ecs" {
 
 resource "aws_security_group" "rds" {
   name        = "${local.name}-rds"
-  description = "Postgres — ECS tasks only"
+  description = "Postgres - ECS tasks only"
   vpc_id      = aws_vpc.main.id
 
   ingress {

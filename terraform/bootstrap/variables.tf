@@ -1,7 +1,7 @@
 variable "aws_region" {
   description = "AWS region for the ledger stack."
   type        = string
-  default     = "eu-west-1"
+  default     = "eu-west-3"
 }
 
 variable "github_owner" {
@@ -19,5 +19,5 @@ variable "github_repo" {
 variable "github_branch" {
   description = "Branch allowed to assume the CI role via OIDC."
   type        = string
-  default     = "main"
+  default     = "op/op"
 }
