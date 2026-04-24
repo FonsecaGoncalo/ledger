@@ -1,8 +1,6 @@
 # Ledger
 
-A double-entry ledger service. Tracks who has what.
-
-Balances aren't stored — they're derived by summing an append-only posting log. Every write is idempotent, and every transaction balances to zero per currency. Those two properties are the whole reason this thing is interesting; everything below is the mechanism for making them true.
+A double-entry ledger service.
 
 ## Quick start
 
@@ -26,7 +24,7 @@ In scope:
 Out of scope, deliberately:
 
 - **FX / currency conversion.** Multi-currency transactions are allowed, but each currency has to balance independently. Conversion is the caller's concern.
-- **Partial reversals.** A `REVERSAL` fully negates the original. Partial undos are expressed as compensating transactions of a different type — that names what actually happened.
+- **Partial reversals.** Not natively supported, a `REVERSAL` fully negates the original.
 - **Holds, authorizations, pending postings.** Every posting is final the moment it lands.
 - **Interest, fees, scheduled actions.** No time-driven behaviour; the ledger does nothing on its own.
 - **Account closure, type/currency changes.** Accounts are immutable once opened.
@@ -50,11 +48,11 @@ Out of scope, deliberately:
 └─────────────────────┘
 ```
 
-**Account** — a named holder of value in a single currency. Its `type` (`ASSET`, `LIABILITY`, `EXPENSE`, `REVENUE`) governs how its balance is displayed. Immutable once opened.
+**Account**: a named holder of value in a single currency. Its `type` (`ASSET`, `LIABILITY`, `EXPENSE`, `REVENUE`) governs how its balance is displayed. Immutable once opened.
 
-**Posting** — a signed amount against one account. Postings are atomic, never modified, never deleted. An account's balance is the sum of its postings.
+**Posting**: a signed amount against one account. Postings are atomic, never modified, never deleted. An account's balance is the sum of its postings.
 
-**Transaction** — a group of ≥2 postings committed atomically. Carries a type, a caller-supplied idempotency key, optional metadata, and, for reversals, a reference to the original transaction.
+**Transaction**: a group of ≥2 postings committed atomically. Carries a type, a caller-supplied idempotency key, optional metadata, and, for reversals, a reference to the original transaction.
 
 ### Balances are derived
 
@@ -62,10 +60,10 @@ There's no balance column anywhere. The balance of an account is `sum(postings.a
 
 | Account type | Visible balance | Example |
 | --- | --- | --- |
-| `ASSET`, `EXPENSE` — debit-normal | `Σ postings` | raw `+100` → `+100` |
-| `LIABILITY`, `REVENUE` — credit-normal | `−Σ postings` | raw `−100` → `+100` |
+| `ASSET`, `EXPENSE` (debit-normal) | `Σ postings` | raw `+100` → `+100` |
+| `LIABILITY`, `REVENUE` (credit-normal) | `−Σ postings` | raw `−100` → `+100` |
 
-Postings themselves are always raw signed integers. Because a balanced transaction sums to zero, the sign flip is a display concern only — it stays accounting-correct for any combination of account types.
+Postings themselves are always raw signed integers. Because a balanced transaction sums to zero, the sign flip is a display concern only; it stays accounting-correct for any combination of account types.
 
 Example: a customer deposits 100 USD at a bank.
 
@@ -103,13 +101,13 @@ Reversals point backwards at existing state, so they have tighter rules than oth
 │ Original transaction        │              │ Reversal transaction        │
 │ type: TRANSFER              │   reverses   │ type: REVERSAL              │
 │─────────────────────────────│  ─────────▶  │─────────────────────────────│
-│  Alice  — USD      −25.00   │              │  Alice  — USD      +25.00   │
-│  Bob    — USD      +25.00   │              │  Bob    — USD      −25.00   │
+│  Alice  · USD      −25.00   │              │  Alice  · USD      +25.00   │
+│  Bob    · USD      +25.00   │              │  Bob    · USD      −25.00   │
 └─────────────────────────────┘              └─────────────────────────────┘
 ```
 
 - Exactly one `reverses` target.
-- The original can't itself be a `REVERSAL` — no chains.
+- The original can't itself be a `REVERSAL`, so no chains.
 - Postings have to be an exact negation: same accounts, same currencies, multiset-equal amounts with opposite sign. No partials.
 - A second attempt to reverse the same original is rejected.
 
@@ -118,14 +116,14 @@ Reversals point backwards at existing state, so they have tighter rules than oth
 Every transaction submission carries a caller-supplied idempotency key. Three outcomes:
 
 ```
-Case A — First submission (key unseen)
+Case A, first submission (key unseen)
     submit(key: K, payload: P) ──▶ store(K → P) ──▶ commit          [CREATED]
 
-Case B — Replay (key seen, payload equal)
+Case B, replay (key seen, payload equal)
     submit(key: K, payload: P) ──▶ lookup(K) == P ──▶ return original
                                                                     [IDEMPOTENT HIT]
 
-Case C — Conflict (key seen, payload differs)
+Case C, conflict (key seen, payload differs)
     submit(key: K, payload: P') ─▶ lookup(K) ≠ P' ──▶ reject        [409 CONFLICT]
 ```
 
@@ -133,7 +131,7 @@ Two payloads are equal when `type`, `description`, `reverses`, `metadata` (struc
 
 ### Concurrency
 
-Concurrent transactions that touch overlapping accounts serialize via row-level locks on `account`, acquired in ascending account-id order before validation runs. That ordering makes deadlocks between overlapping transactions structurally impossible, and it gives the solvency check a consistent view of the balance for the duration of the transaction. Postgres runs at `READ COMMITTED` — lock discipline, not isolation level, is what enforces the invariants.
+Concurrent transactions that touch overlapping accounts serialize via row-level locks on `account`, acquired in ascending account-id order before validation runs. That ordering makes deadlocks between overlapping transactions structurally impossible, and it gives the solvency check a consistent view of the balance for the duration of the transaction.
 
 Idempotency-key races are resolved by a unique constraint on `transaction.idempotency_key`. The loser of a race with an identical payload returns the winning transaction; the loser with a differing payload gets a `409`.
 
@@ -145,21 +143,22 @@ Non-obvious choices and what they trade away.
 
 **Raw signed integers on postings, sign flip at display.** The alternative is signing by account type at write time. That's messier: the same deposit looks different depending on where it lands, and a reversal has to invert per-account. With raw integers, "balanced" is the literal zero-sum arithmetic check, reversals are a multiset negation, and the sign convention only surfaces at the display boundary.
 
-**Caller-supplied idempotency keys.** Server-generated keys mean the caller needs a round-trip to learn them, which defeats the point under retry. Callers already have natural unique identifiers for most operations (payment id, order id, webhook event id); they supply those and we store the verbatim payload for later equality checks.
+**Caller-supplied idempotency keys.** Server-generated keys mean the caller needs a round-trip to learn them, which defeats the point under retry. Callers already have natural unique identifiers for most operations (payment id, order id, webhook event id); they supply those and we store the original payload for later equality checks.
 
-**Minor units as int64, no decimals.** Removes every rounding question from the ledger. Callers convert at the edge once, and every arithmetic operation inside the service is integer. FX, when it happens, is a caller concern for the same reason.
+**Minor units as int64, no decimals.** Removes every rounding question from the ledger. Callers convert at the edge once, and every arithmetic operation inside the service is integer.
 
-**Per-currency balance, not cross-currency.** A multi-currency transaction is legal as long as each currency sums to zero independently. The ledger never implies a rate. The moment it did, it would own FX — and FX is a rate-fetching, rate-dating, rate-auditing problem that belongs in a different service.
+**Per-currency balance, not cross-currency.** A multi-currency transaction is legal as long as each currency sums to zero independently. The ledger never implies a rate. The moment it did, it would own FX, and FX is a rate-fetching, rate-dating, rate-auditing problem that belongs in a different service.
 
 ## Examples
 
-Four scenarios against a running service. Each one has a runnable script under `scripts/`:
+Five scenarios against a running service. Each one has a runnable script under `scripts/`:
 
 ```
 ./scripts/personal-accounts-demo.sh   # deposit, transfer, withdraw
 ./scripts/overdraft-demo.sh           # solvency rejection
 ./scripts/reversal-demo.sh            # reversal
 ./scripts/fx-conversion-demo.sh       # caller-implemented FX
+./scripts/fee-demo.sh                 # card payment with an applied fee
 ```
 
 All take an optional `BASE_URL` (default `http://localhost:8080`) and need `curl` and `jq`.
@@ -174,7 +173,7 @@ POST /api/v1/accounts  { "type": "LIABILITY", "currency": "EUR", "externalRef": 
 POST /api/v1/accounts  { "type": "LIABILITY", "currency": "EUR", "externalRef": "personal-bob-..."   }
 ```
 
-Deposit €1,000 into Alice — settlement debited, Alice's liability credited:
+Deposit €1,000 into Alice: settlement debited, Alice's liability credited:
 
 ```
 POST /api/v1/transactions
@@ -188,7 +187,7 @@ POST /api/v1/transactions
 }
 ```
 
-Transfer €750 Alice → Bob. Both are `LIABILITY` accounts, so the same sign convention applies to both legs — Alice's is positive (her visible balance decreases), Bob's is negative (his increases):
+Transfer €750 Alice → Bob. Both are `LIABILITY` accounts, so the same sign convention applies to both legs: Alice's is positive (her visible balance decreases), Bob's is negative (his increases):
 
 ```
 POST /api/v1/transactions
@@ -201,7 +200,7 @@ POST /api/v1/transactions
 }
 ```
 
-Bob withdraws €300 — mirror of the deposit:
+Bob withdraws €300, mirror of the deposit:
 
 ```
 POST /api/v1/transactions
@@ -247,7 +246,7 @@ Nothing is persisted. Solvency rejected at validation.
 
 ### Reversal
 
-Alice has €1,000 and transfers €400 to Bob. Mistake — undo it by referencing the original transaction with the posting signs flipped:
+Alice has €1,000 and transfers €400 to Bob. Mistake: undo it by referencing the original transaction with the posting signs flipped:
 
 ```
 POST /api/v1/transactions
@@ -262,13 +261,13 @@ POST /api/v1/transactions
 }
 ```
 
-Final: Alice €1,000, Bob €0. The original transfer is still in history — a reversal is a canceling entry, not an erasure.
+Final: Alice €1,000, Bob €0. The original transfer is still in history; a reversal is a canceling entry, not an erasure.
 
 ### Caller-implemented FX
 
 The ledger doesn't convert currencies, but one transaction can span multiple as long as each currency balances independently. That's the shape of caller-implemented FX.
 
-Four accounts — EUR and USD treasuries (`ASSET`), Alice's EUR and USD sides (`LIABILITY`). Alice has €100 and wants USD at 0.87. One transaction, four postings: two EUR legs that sum to zero, two USD legs that sum to zero.
+Four accounts: EUR and USD treasuries (`ASSET`), Alice's EUR and USD sides (`LIABILITY`). Alice has €100 and wants USD at 0.87. One transaction, four postings: two EUR legs that sum to zero, two USD legs that sum to zero.
 
 ```
 POST /api/v1/transactions
@@ -286,20 +285,43 @@ POST /api/v1/transactions
 }
 ```
 
-Per-currency check: EUR `(+10000) + (−10000) = 0` ✓, USD `(+8700) + (−8700) = 0` ✓. The ledger commits. It doesn't interpret the rate or validate the rounding — those are the caller's problem. The ledger owns conservation.
+Per-currency check: EUR `(+10000) + (−10000) = 0` ✓, USD `(+8700) + (−8700) = 0` ✓. The ledger commits. It doesn't interpret the rate or validate the rounding; those are the caller's problem. The ledger owns conservation.
 
 Final: Alice EUR €0, Alice USD $87.
+
+### Applied fee
+
+Fees are just another posting inside a balanced transaction. Alice pays €50 to a merchant with a €1 platform fee. Four accounts: a settlement pool (`ASSET`), Alice (`LIABILITY`), the merchant (`LIABILITY`), and a fee-revenue account (`REVENUE`, credit-normal — negative postings grow it). One transaction, three postings: Alice is debited the full €51, the merchant is credited €50, the €1 fee lands on revenue.
+
+```
+POST /api/v1/transactions
+{
+  "idempotencyKey": "payment-alice-cafe-...",
+  "type": "TRANSFER",
+  "description": "Card payment: Alice → Café €50.00 (fee €1.00)",
+  "postings": [
+    { "accountId": "<alice>",       "amount":  5100, "currency": "EUR" },
+    { "accountId": "<merchant>",    "amount": -5000, "currency": "EUR" },
+    { "accountId": "<fee-revenue>", "amount":  -100, "currency": "EUR" }
+  ],
+  "metadata": { "feeBps": 200, "feeAmount": 100 }
+}
+```
+
+Check: `(+5100) + (−5000) + (−100) = 0 EUR` ✓. Payment and fee commit together or not at all — there's no window where the customer is charged but the fee never posts. Bundling them into one balanced transaction is what makes that atomicity free.
+
+Starting from Alice with €100, after the payment: Alice €49.00, Merchant €50.00, Fee Revenue €1.00.
 
 ## Running it
 
 ### Prerequisites
 
 - Java 25 on `PATH` (or let the Gradle toolchain fetch it)
-- Docker — for Postgres and the Testcontainers-backed integration tests
+- Docker, for Postgres and the Testcontainers-backed integration tests
 
 ### Start the service
 
-Full stack via Compose — Postgres and the app, exposed on `localhost:8080`:
+Full stack via Compose (Postgres and the app), exposed on `localhost:8080`:
 
 ```
 docker compose up -d
@@ -322,7 +344,7 @@ With the service running, the OpenAPI spec and an interactive UI are served by t
 
 | URL | What |
 | --- | --- |
-| `http://localhost:8080/swagger-ui.html` | Interactive Swagger UI — try endpoints against the running app |
+| `http://localhost:8080/swagger-ui.html` | Interactive Swagger UI (try endpoints against the running app) |
 | `http://localhost:8080/v3/api-docs` | OpenAPI spec (JSON) |
 | `http://localhost:8080/v3/api-docs.yaml` | OpenAPI spec (YAML) |
 
@@ -330,7 +352,7 @@ With the service running, the OpenAPI spec and an interactive UI are served by t
 
 | Suite | Scope | Docker |
 | --- | --- | --- |
-| `test` | Unit — domain logic and validators | No |
+| `test` | Unit (domain logic and validators) | No |
 | `integrationTest` | API and scenario tests against a real Postgres via Testcontainers | Yes |
 
 ```
